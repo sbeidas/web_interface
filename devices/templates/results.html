@@ -1,0 +1,33 @@
+
+{% extends 'base.html' %}
+
+{% block container %}
+
+
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.0/jquery.min.js"></script>
+<script>
+$(function() { /* ... */ });
+
+function updateImage()
+{
+
+    document.getElementById("theText").src = "/result.png?" + new Date().getTime();
+    
+ 
+
+}
+
+
+
+</script>
+
+
+
+<div id="loaddiv">
+    <img id="theText" src="result.png" onload='updateImage()'>
+</div>
+
+
+{% endblock %}
+
