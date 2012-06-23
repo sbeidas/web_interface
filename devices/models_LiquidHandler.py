@@ -1,7 +1,10 @@
 import numpy as np
+import sys
+from Gilson_Liquid_Handlers import *
 
 class Serial_Delution():
     def __init__(self,max_conc,min_conc,count):
+        
         self.max_conc=float(max_conc)
         self.min_conc=float(min_conc)
         self.count=count
@@ -9,9 +12,9 @@ class Serial_Delution():
         self.conc_array =  np.empty((0),'float32')
         self.vol_array =  np.empty((0),'float32')
         
-        self.plate=Plate(12,8)
-        
-        self.max_sample_volume=1
+        self.plate=Plate_300()
+
+        self.max_sample_volume=50
 
     def getConcentrationSamples(self):
         i=0
@@ -60,6 +63,14 @@ class Serial_Delution():
  
                 water=total_volume-final_sample_volume
                 print ("We need"+"["+str(final_sample_volume)+"]"+"ml of the"+"["+str(self.max_conc)+"]"+  "and ["+str(water)+"] water")
+                
+                self.plate.lh.probes.load_tips([0,0,1,0],box=2,row=12,col=1,tip_size=200)
+                self.plate.lh.probes.load_tips([0,1,0,0],box=1,row=12,col=1,tip_size=1000)
+                if not water==0.0:
+                    self.plate.lh.move_volume_tip(water,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,150)
+                self.plate.lh.move_volume(final_sample_volume,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,130)
+         
+                
                 self.plate.setCurrentCell(final_sample_volume,self.max_conc,water,total_volume)
                 self.plate.nextNode()
 
@@ -68,8 +79,11 @@ class Serial_Delution():
                 final_sample_volume=self.getVolumeFromConc(self.conc_array[index],self.conc_array[index-1],self.max_sample_volume+self.vol_array[index])
                 water=total_volume-final_sample_volume
                 print ("We need"+"["+str(final_sample_volume)+"]"+"ml of the"+"["+str(self.conc_array[index-1])+"]"+  "and ["+str(water)+"] water")
-                
-                self.plate.prevNode().reduceTotalVolume(self.vol_array[index-1])
+                if not water==0.0:
+                    self.plate.lh.move_volume_tip(water,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,150)
+                currentNode=self.plate.getCurrentCell()
+                prevNode=self.plate.prevNode()
+                self.plate.lh.move_volume_from_well(self.vol_array[index-1],prevNode.x,prevNode.y,130,currentNode.x,currentNode.y,130)
                 self.plate.nextNode()
                 self.plate.setCurrentCell(final_sample_volume,self.conc_array[index],water,total_volume)
                 self.plate.nextNode()
@@ -82,10 +96,17 @@ class Serial_Delution():
              
 class Plate():
     
-    def __init__(self,rows,columns):
+    def __init__(self,rows,columns,x_init,y_init,cell_spacing):
         self.array=np.array([])
+        self.x_init=x_init
+        self.y_init=y_init
         for index in range(rows*columns):
-            self.array=np.append(self.array,Sample(0,0,0,0))
+            curr_col=index%rows
+            curr_row=index/rows
+            x =  self.x_init + (cell_spacing*(curr_row))
+            y =   self.y_init+ (cell_spacing*(curr_col))
+            self.array=np.append(self.array,Sample(0,0,0,0,x,y))
+            
             
         self.array=self.array.reshape(columns,rows)
         self.rows=rows
@@ -95,30 +116,33 @@ class Plate():
         self.y_index=0
         
     def nextNode(self):
-        if(self.rows>self.y_index+1):
+        if(self.rows-1>self.y_index):
+            
             self.y_index+=1
             
-        elif((self.rows==self.x_index+1) and (self.columns==self.y_index+1)):
+        elif((self.columns-1==self.x_index) and (self.rows-1==self.y_index)):
             self.x_index=0
             self.y_index=0
         else:
             self.x_index+=1
             self.y_index=0
+        print "x: "+str(self.x_index)
+        print "y: "+str(self.y_index)
         
-        return self.getCell(self.y_index,self.x_index)
+        return self.getCell(self.x_index,self.y_index)
         
     def prevNode(self):
         if(0<self.y_index):
             self.y_index-=1
             
-        elif((0==self.x_index) and (0==self.y_index)):
-            self.x_index=self.rows-1
-            self.y_index=self.columns-1
+        elif((self.x_index==0) and (self.y_index==0)):
+            self.x_index=self.columns-1
+            self.y_index=self.rows-1
         else:
-            self.x_index-=1
-            self.y_index=self.columns-1
+            self.y_index-=1
+            self.x_index=self.columns-1
         
-        return self.getCell(self.y_index,self.x_index)
+        return self.getCell(self.x_index,self.y_index)
     
   
 
@@ -136,6 +160,8 @@ class Plate():
         self.array[self.x_index][self.y_index].conc_value=conc_value
         self.array[self.x_index][self.y_index].vol_diluent=vol_diluent
         self.array[self.x_index][self.y_index].totalVolume=totalVolume
+        #self.array[self.x_index][self.y_index].x=x
+        #self.array[self.x_index][self.y_index].y=y
         
     def printTotalVolumes(self):
         for samplearray in self.array:
@@ -152,22 +178,62 @@ class Plate():
                 print str(sample.conc_value)+","
             print"] \n"
             
-        
-          
+    def printCoordinates(self):
+        for samplearray in self.array:
+            print "["
+            for sample in samplearray:
+              
+                print "("+str(sample.x)+","+str(sample.y)+")"
+            print"] \n"
+    
+            
 
     def getCell(self,x,y):
-        return self.array[y][x]
+        return self.array[x][y]
+    
+    def getCurrentCell(self):
+        return self.getCell(self.x_index,self.y_index)
         
     def getIndex(self):
         return self.y_index+(self.x_index*(self.rows))
         
+class Plate_300(Plate):
+    def __init__(self):
+            Plate.__init__(self,12,8,262,63,9)
+            
+            logging.basicConfig(level=logging.DEBUG)
+            probe_types = ['injection','2507253','2507253','2507253']
+            syringe_pump_1 = {'device_id':0, 'left_volume': 250, 'right_volume': 5000}
+            syringe_pump_2 = {'device_id':1, 'left_volume': 5000, 'right_volume': 500}
+            self.lh = Gilson_System(com_port = 1)
+            self.lh.add_Quad_Z_215(22,probe_types)
+            self.lh.add_syringes(syringe_pump_1,syringe_pump_2)
+            self.lh.syringes.initialize([1,1,1,1])
+            self.lh.probes.move_xy(mask=[0,1,0,0],xy=(263,63))
+            
+    def iterate(self,direction):
+        
+        for i in range ((self.rows*self.columns)-1):
+            self.lh.probes.move_xy(mask=[0,1,0,0],xy=(self.getCurrentCell().x,self.getCurrentCell().y))
+            if(direction=='F'):
+                self.nextNode()
+            else:
+                self.prevNode()
+                
+                
+
+            
+            
+        
 class Sample():
     
-    def __init__(self,volume_conc,conc_value,vol_diluent,totalVolume):    
+    def __init__(self,volume_conc,conc_value,vol_diluent,totalVolume,x,y):    
         self.volume_conc=volume_conc
         self.conc_value=conc_value
         self.vol_diluent=vol_diluent
         self.totalVolume=totalVolume
+        self.x=x
+        self.y=y
       
         
     def reduceTotalVolume(self,value):
