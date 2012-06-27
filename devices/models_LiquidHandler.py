@@ -3,8 +3,8 @@ import sys
 from Gilson_Liquid_Handlers import *
 
 class Serial_Delution():
-    def __init__(self,max_conc,min_conc,count):
-        
+    def __init__(self,max_conc,min_conc,count,wellVolume):
+        print 'In constructor -Serial_Delution'
         self.max_conc=float(max_conc)
         self.min_conc=float(min_conc)
         self.count=count
@@ -12,9 +12,9 @@ class Serial_Delution():
         self.conc_array =  np.empty((0),'float32')
         self.vol_array =  np.empty((0),'float32')
         
-        self.plate=Plate_300()
+        self.plate=Well_Plate(wellVolume=wellVolume)
 
-        self.max_sample_volume=50
+        self.max_sample_volume=100
 
     def getConcentrationSamples(self):
         i=0
@@ -67,8 +67,10 @@ class Serial_Delution():
                 self.plate.lh.probes.load_tips([0,0,1,0],box=2,row=12,col=1,tip_size=200)
                 self.plate.lh.probes.load_tips([0,1,0,0],box=1,row=12,col=1,tip_size=1000)
                 if not water==0.0:
+                    print str(water)+ "needed---------------------"
                     self.plate.lh.move_volume_tip(water,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,150)
                 self.plate.lh.move_volume(final_sample_volume,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,130)
+                print str(final_sample_volume)+ "conc needed------------"
          
                 
                 self.plate.setCurrentCell(final_sample_volume,self.max_conc,water,total_volume)
@@ -81,13 +83,17 @@ class Serial_Delution():
                 print ("We need"+"["+str(final_sample_volume)+"]"+"ml of the"+"["+str(self.conc_array[index-1])+"]"+  "and ["+str(water)+"] water")
                 if not water==0.0:
                     self.plate.lh.move_volume_tip(water,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,150)
+                    print str(water)+ "needed-------"
                 currentNode=self.plate.getCurrentCell()
                 prevNode=self.plate.prevNode()
                 self.plate.lh.move_volume_from_well(self.vol_array[index-1],prevNode.x,prevNode.y,130,currentNode.x,currentNode.y,130)
                 self.plate.nextNode()
                 self.plate.setCurrentCell(final_sample_volume,self.conc_array[index],water,total_volume)
+                print str(final_sample_volume)+ "conc needed------------"
                 self.plate.nextNode()
         else:
+            self.plate.lh.probes.eject_tips([0,1,0,0])
+            self.plate.lh.probes.eject_tips([0,0,1,0])
             print 'No more Samples to Dilute'
             
     def getConcentrationArray(self):
@@ -104,10 +110,9 @@ class Plate():
             curr_col=index%rows
             curr_row=index/rows
             x =  self.x_init + (cell_spacing*(curr_row))
-            y =   self.y_init+ (cell_spacing*(curr_col))
-            self.array=np.append(self.array,Sample(0,0,0,0,x,y))
-            
-            
+            y =  self.y_init+ (cell_spacing*(curr_col))
+            self.array=np.append(self.array,Sample(0,0,0,0,x,y))  
+
         self.array=self.array.reshape(columns,rows)
         self.rows=rows
         self.columns=columns
@@ -197,9 +202,9 @@ class Plate():
     def getIndex(self):
         return self.y_index+(self.x_index*(self.rows))
         
-class Plate_300(Plate):
-    def __init__(self):
-            Plate.__init__(self,12,8,262,63,9)
+class Well_Plate(Plate):
+    'Class abstracting  the 12*8 well module,wellVolume is used to indicate the maximuim well volume and thus assign the account for the physical characteristics of the Plate such height and well depth '
+    def __init__(self,wellVolume=300):
             
             logging.basicConfig(level=logging.DEBUG)
             probe_types = ['injection','2507253','2507253','2507253']
@@ -209,7 +214,19 @@ class Plate_300(Plate):
             self.lh.add_Quad_Z_215(22,probe_types)
             self.lh.add_syringes(syringe_pump_1,syringe_pump_2)
             self.lh.syringes.initialize([1,1,1,1])
-            self.lh.probes.move_xy(mask=[0,1,0,0],xy=(263,63))
+            self.lh.probes.move_z(mask=[1,1,1,1],z=175,speed='max')
+            
+            if(wellVolume==300):
+                Plate.__init__(self,12,8,262,63,9)
+                self.lh.probes.move_xy(mask=[0,1,0,0],xy=(263,63))
+                self.z_start=100
+                self.z_end=91
+            else:
+                Plate.__init__(self,12,8,381.5,62,9)
+                self.lh.probes.move_xy(mask=[0,1,0,0],xy=(381.5,62))
+                self.z_start=102
+                self.z_end=64
+                
             
     def iterate(self,direction):
         
@@ -220,10 +237,6 @@ class Plate_300(Plate):
             else:
                 self.prevNode()
                 
-                
-
-            
-            
         
 class Sample():
     

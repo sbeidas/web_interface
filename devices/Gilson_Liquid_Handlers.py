@@ -211,9 +211,9 @@ class Probe():
         if z:
             self.z = z
     
-    def tip_loaded(self):
+    def tip_loaded(self,offset):
         self.has_tip = True
-        self.z_offset = 44.0 #42.9
+        self.z_offset =offset
     
     def tip_unloaded(self):
         self.has_tip = False
@@ -318,7 +318,7 @@ class Quad_Z_215(Device):
     def set_motor_status(self, x,y,z):
         '''sets X,Y,Z motor status: 0 = disable, 1 = enable'''
         if self.buffered('E%d%d%d' %(x,y,z)):
-            logger.debug('set XYZ motor status to %d%d%d' %(x,y,z))
+            #logger.debug('set XYZ motor status to %d%d%d' %(x,y,z))
             return True
         else:
             logger.warning('failed to set XYZ motor status')
@@ -343,7 +343,7 @@ class Quad_Z_215(Device):
         '''
         retStr = self.immediate('m')
         if retStr:
-            logger.debug('read motor status %s' %retStr)
+            #logger.debug('read motor status %s' %retStr)
             return retStr
         else:
             logger.warning('failed to read motor status')
@@ -595,39 +595,25 @@ class Probes():
         assume rack 234 is in position 2 loaded with 1-2 boxes of 200uL tips
         probe_mask = [1,1,1,1]  = A,B,C,D
         '''
-        if(tip_size==1000): #meassure in microL
-            x = 144.0 # for rack position 2
-            z_retain, z_near, z_load = 168.0,105.0,97.0 #changed z_load from 85.0 (z_load=97 and z_retain=170 for 200microL) z)(z_load=72and z_retain=160  for 200microL)
-            
-            if box == 1:
-                y = 64.0
-            elif box == 2:
-                y = 209.0
-        else:
-            x = 143.0 # for rack position 2
-            z_retain, z_near, z_load = 160.0,80.0,62.0 #changed z_load from 85.0 (z_load=97 and z_retain=170 for 200microL) z)(z_load=72and z_retain=160  for 200microL)   
-            if box == 1:
-                y = 63.0
-            elif box == 2:
-                y = 208.5
+        tip=Tip(tip_size,box)
                 
            
         spacing = 9 # mm
         
      
-        x = x + (9*(col-1))
-        y = y + (9*(row-1))
+        x = tip.x + (9*(col-1))
+        y = tip.y + (9*(row-1))
         #self.move_z([z_retain]*4, speed='max')
-        self.move_z(mask=probe_mask,z=z_retain  , speed=5000)
+        self.move_z(mask=probe_mask,z=tip.z_retain  , speed=5000)
         self.arm.set_probe_width(spacing)
         self.move_xy(mask=probe_mask,xy=(x,y))
-        self.move_z(mask=probe_mask,z=z_near,speed='max')
-        self.move_z(mask=probe_mask,z=z_load,speed=5000)
-        self.move_z(mask=probe_mask,z=z_near,speed=5000)
-        self.move_z(mask=probe_mask,z=z_retain,speed='max')
+        self.move_z(mask=probe_mask,z=tip.z_near,speed='max')
+        self.move_z(mask=probe_mask,z=tip.z_load,speed=5000)
+        self.move_z(mask=probe_mask,z=tip.z_near,speed=5000)
+        self.move_z(mask=probe_mask,z=tip.z_retain,speed='max')
         for i,probe in enumerate(self.probes):
             if probe_mask[i]:
-                probe.tip_loaded()
+                probe.tip_loaded(tip.z_offset)
         
     def eject_tips(self,probe_mask):
         ''' ejects to chute '''
@@ -641,6 +627,28 @@ class Probes():
         for i,probe in enumerate(self.probes):
             if probe_mask[i]:
                 probe.tip_unloaded()
+                
+class Tip():
+    def __init__(self,volume,box):
+        if(volume==1000): #meassure in microL
+            self.x = 143.5 # for rack position 2
+            self.z_retain, self.z_near, self.z_load = 167.0,115.0,91.0 #changed z_load from 85.0 (z_load=97 and z_retain=170 for 200microL) z)(z_load=72and z_retain=160  for 200microL)
+            self.z_offset=66.14
+            if box == 1:
+                self.y = 62.2
+            elif box == 2:
+                self.y = 209.0
+        else:
+            self.x = 143.0 # for rack position 2
+            self.z_retain, self.z_near, self.z_load = 160.0,85.0,62.0 #changed z_load from 85.0 (z_load=97 and z_retain=170 for 200microL) z)(z_load=72and z_retain=160  for 200microL)
+            self.z_offset=51.21
+            if box == 1:
+                self.y = 62.0
+            elif box == 2:
+                self.y = 208.5
+
+
+        
         
 class Injection_Module_819(Device):
     error_messages = {  0: 'No error', \
@@ -1207,19 +1215,19 @@ class Gilson_System():
         self.probes.move_xy(mask=[0,0,1,0],xy=(310,185))
         
         
-        self.probes.move_z(mask=[0,0,1,0],z=135,speed='max')
-        self.probes.move_z(mask=[0,0,1,0],z=100,speed=7000)
+        self.probes.move_z(mask=[0,0,1,0],z=145,speed='max')
+        self.probes.move_z(mask=[0,0,1,0],z=100,speed=5000)
         self.syringes.aspirate([1,0,0,0],float(volume),'N',8.0)
-        self.probes.move_z(mask=[0,0,1,0],z=130,speed=7000)
+        self.probes.move_z(mask=[0,0,1,0],z=130,speed=5000)
         self.syringes.aspirate([1,0,0,0],12.0,'N',5.0)
         self.probes.move_z(mask=[0,0,1,0],z=160,speed='max')
 
         #move 2nd well
         self.probes.move_xy(mask=[0,0,1,0],xy=(x,y))
-        self.probes.move_z(mask=[0,0,1,0],z=150,speed=9000)
-        self.probes.move_z(mask=[0,0,1,0],z=z,speed=7000)
+        self.probes.move_z(mask=[0,0,1,0],z=150,speed=5000)
+        self.probes.move_z(mask=[0,0,1,0],z=z,speed=5000)
         self.syringes.dispense([1,0,0,0],10.0,50.0)
-        self.syringes.dispense([1,0,0,0],float(volume),10.0)
+        self.syringes.dispense([1,0,0,0],float(volume),8.0)
         self.syringes.dispense([1,0,0,0],10.0,10.0)
         self.syringes.dispense([1,0,0,0],2.0,'max')
         self.probes.move_z(mask=[0,0,1,0],z=160,speed='max')
@@ -1228,18 +1236,20 @@ class Gilson_System():
     #delete2
     def move_volume_tip(self,volume,x,y,z):
         volume=volume*1.07
+        
+        print'Final Volume moved: '+str(volume)
         #self.probes.load_tips([0,1,0,0],box=1,row=12,col=1,tip_size=1000)
         self.probes.move_z(mask=[0,1,0,0],z=168,speed='max')
         #1rst well
         self.probes.move_xy(mask=[0,1,0,0],xy=(281,186))
         self.syringes.aspirate([0,0,1,0],20.,'N','max')
         
-        self.probes.move_z(mask=[0,1,0,0],z=150,speed='max')
-        self.probes.move_z(mask=[0,1,0,0],z=125,speed=5000)
+        self.probes.move_z(mask=[0,1,0,0],z=130,speed='max')
+        self.probes.move_z(mask=[0,1,0,0],z=115,speed=5000)
         self.syringes.aspirate([0,0,1,0],float(volume),'N',5.0)
         self.probes.move_z(mask=[0,1,0,0],z=150,speed=5000)
         self.syringes.aspirate([0,0,1,0],12.0,'N',10.0)
-        self.probes.move_z(mask=[0,1,0,0],z=168,speed=5000)
+        self.probes.move_z(mask=[0,1,0,0],z=167,speed=5000)
         
 
         #move 2nd well
@@ -1253,6 +1263,7 @@ class Gilson_System():
         
     def move_volume_from_well(self,volume,x_start,y_start,z_start,x_dest,y_dest,z_dest):
         volume=volume*1.03
+        print'Final Volume moved: '+str(volume)
         self.syringes.aspirate([0,0,1,0],10.,'N','max')
         #self.probes.load_tips([0,0,1,0],box=2,row=12,col=1  ,tip_size=200)
         self.probes.move_xy(mask=[0,0,1,0],xy=(x_start,y_start))
