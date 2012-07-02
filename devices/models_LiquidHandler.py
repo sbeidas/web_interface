@@ -13,9 +13,10 @@ class Serial_Delution():
         self.vol_array =  np.empty((0),'float32')
         
         self.plate=Well_Plate(wellVolume=wellVolume)
-
-        self.max_sample_volume=100
-
+        #self.plate=Plate(12,8,381.5,62,9)
+        self.max_sample_volume=300
+        self.max_well_capacity=2000
+        
     def getConcentrationSamples(self):
         i=0
         diff=(self.max_conc-self.min_conc)/(self.count-1)
@@ -58,35 +59,49 @@ class Serial_Delution():
             if(index==0):
                 self.getConcentrationSamples()
                 self.getSampleVolumeArray()
-                total_volume=self.max_sample_volume+self.vol_array[index]
+                total_volume=self.max_sample_volume+self.vol_array[index]+self.vol_array[index+1]
                 final_sample_volume=self.getVolumeFromConc(self.max_conc,self.max_conc,total_volume)
  
                 water=total_volume-final_sample_volume
                 print ("We need"+"["+str(final_sample_volume)+"]"+"ml of the"+"["+str(self.max_conc)+"]"+  "and ["+str(water)+"] water")
                 
-                self.plate.lh.probes.load_tips([0,0,1,0],box=2,row=12,col=1,tip_size=200)
-                self.plate.lh.probes.load_tips([0,1,0,0],box=1,row=12,col=1,tip_size=1000)
-                if not water==0.0:
+                if not (self.plate.lh.probes[1].has_tip):
+                    self.plate.lh.probes.load_tips([0,1,0,0],box=1,row=12,col=1,tip_size=1000)
+                if not (self.plate.lh.probes[2].has_tip):
+                    self.plate.lh.probes.load_tips([0,0,1,0],box=2,row=12,col=1,tip_size=200)
+                    
+                if not water<0.0:
                     print str(water)+ "needed---------------------"
-                    self.plate.lh.move_volume_tip(water,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,150)
-                self.plate.lh.move_volume(final_sample_volume,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,130)
+                    self.plate.get_volume_from_eppendorf_tubes(water,960,1000,'L')
+                self.plate.get_volume_from_eppendorf_tubes(final_sample_volume,950,1000,'R')
+                
+
                 print str(final_sample_volume)+ "conc needed------------"
          
                 
                 self.plate.setCurrentCell(final_sample_volume,self.max_conc,water,total_volume)
                 self.plate.nextNode()
+                
+                self.plate.lh.probes.eject_tips([0,1,0,0])
+                self.plate.lh.probes.load_tips([0,1,0,0],box=1,row=12,col=1,tip_size=1000)
+                
+            
 
             else:
-                total_volume=self.max_sample_volume+self.vol_array[index]
+                if(len(self.vol_array)<index+1):
+                    total_volume=self.max_sample_volume+self.vol_array[index]+self.vol_array[index+1]
+                else:
+                    total_volume=self.max_sample_volume+self.vol_array[index]+self.vol_array[index+1]
                 final_sample_volume=self.getVolumeFromConc(self.conc_array[index],self.conc_array[index-1],self.max_sample_volume+self.vol_array[index])
                 water=total_volume-final_sample_volume
                 print ("We need"+"["+str(final_sample_volume)+"]"+"ml of the"+"["+str(self.conc_array[index-1])+"]"+  "and ["+str(water)+"] water")
                 if not water==0.0:
-                    self.plate.lh.move_volume_tip(water,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,150)
+                    self.plate.lh.move_volume_tip(water,self.plate.getCurrentCell().x,self.plate.getCurrentCell().y,(self.plate.z_end+self.plate.lh.probes[1].z_offset)-10,'L')
                     print str(water)+ "needed-------"
                 currentNode=self.plate.getCurrentCell()
                 prevNode=self.plate.prevNode()
-                self.plate.lh.move_volume_from_well(self.vol_array[index-1],prevNode.x,prevNode.y,130,currentNode.x,currentNode.y,130)
+                self.plate.dilute_conc_from_well(self.vol_array[index-1],161,currentNode,prevNode)
+                #self.plate.lh.move_volume_from_well(self.vol_array[index-1],prevNode.x,prevNode.y,(self.plate.z_end+self.plate.lh.probes[2].z_offset)-12,currentNode.x,currentNode.y,(self.plate.z_end+self.plate.lh.probes[2].z_offset)-12)
                 self.plate.nextNode()
                 self.plate.setCurrentCell(final_sample_volume,self.conc_array[index],water,total_volume)
                 print str(final_sample_volume)+ "conc needed------------"
@@ -218,7 +233,7 @@ class Well_Plate(Plate):
             
             if(wellVolume==300):
                 Plate.__init__(self,12,8,262,63,9)
-                self.lh.probes.move_xy(mask=[0,1,0,0],xy=(263,63))
+                self.lh.probes.move_xy(mask=[0,1,0,0],xy=(263.5,63))
                 self.z_start=100
                 self.z_end=91
             else:
@@ -226,6 +241,7 @@ class Well_Plate(Plate):
                 self.lh.probes.move_xy(mask=[0,1,0,0],xy=(381.5,62))
                 self.z_start=102
                 self.z_end=64
+                self.max_well_capacity=2000
                 
             
     def iterate(self,direction):
@@ -237,7 +253,45 @@ class Well_Plate(Plate):
             else:
                 self.prevNode()
                 
-        
+    def get_volume_from_eppendorf_tubes(self,volume,tip_volume,probe,eppendorf_tube):
+
+        if volume<tip_volume:
+            if(probe==1000):
+                self.lh.move_volume_tip(volume,self.getCurrentCell().x,self.getCurrentCell().y,self.get_z_offset(1000,self.getCurrentCell(),8),eppendorf_tube)
+                self.getCurrentCell().totalVolume+=volume
+            elif(probe==200):
+                self.lh.move_volume(volume,self.getCurrentCell().x,self.getCurrentCell().y,self.get_z_offset(200,self.getCurrentCell(),10))
+                self.getCurrentCell().totalVolume+=volume
+        else:
+            iterations=int((volume/tip_volume)+1)
+            vol_iteration=float(volume)/iterations
+            for i in range ((volume/tip_volume)+1):
+                if(probe==1000):
+                    self.lh.move_volume_tip(vol_iteration,self.getCurrentCell().x,self.getCurrentCell().y,self.get_z_offset(1000,self.getCurrentCell(),12),eppendorf_tube)
+                    self.getCurrentCell().totalVolume+=volume
+                elif(probe==200):
+                    self.lh.move_volume(vol_iteration,self.getCurrentCell().x,self.getCurrentCell().y,self.get_z_offset(200,self.getCurrentCell(),10))
+                    self.getCurrentCell().totalVolume+=volume
+
+    def dilute_conc_from_well(self,volume,tip_volume,currentNode,prevNode):
+        if volume<tip_volume:
+            self.lh.move_volume_from_well(volume,prevNode.x,prevNode.y,self.get_z_offset(200,prevNode,12),currentNode.x,currentNode.y,self.get_z_offset(200,currentNode,12))
+            currentNode.totalVolume+=volume
+            prevNode.totalVolume-=volume
+        else:
+            iterations=int((volume/tip_volume)+1)
+            vol_iteration=float(volume)/iterations
+            for i in range ((volume/tip_volume)+1):
+                self.lh.move_volume_from_well(vol_iteration,prevNode.x,prevNode.y,self.get_z_offset(200,prevNode,12),currentNode.x,currentNode.y,self.get_z_offset(200,currentNode,12))
+                
+    def get_z_offset(self,probe,well,offset):
+        if probe==1000:
+            probe=1
+            return  (self.z_end+self.lh.probes[probe].z_offset)+((self.z_start-self.z_end)*(well.totalVolume/2000) -offset)
+        elif probe==200:
+            probe=2
+            return  (self.z_end+self.lh.probes[probe].z_offset)+((self.z_start-self.z_end)*(well.totalVolume/2000) -offset)
+            
 class Sample():
     
     def __init__(self,volume_conc,conc_value,vol_diluent,totalVolume,x,y):    
@@ -250,9 +304,9 @@ class Sample():
       
         
     def reduceTotalVolume(self,value):
-        print '--------------'
-        print 'Reduce by '+ str(value)
+
         if(self.totalVolume>=value):
+            self.totalVolume=self.totalVolume-value
 
             self.totalVolume=self.totalVolume-value
         else:
@@ -260,6 +314,9 @@ class Sample():
             print 'Total Volume= '+str(self.totalVolume)
     def getTotalVolume(self):
         self.totalVolume
+    
+ 
+        
         
         
         
