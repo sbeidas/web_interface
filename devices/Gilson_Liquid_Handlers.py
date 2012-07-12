@@ -1220,7 +1220,7 @@ class Gilson_System():
             self.probes.move_xy(mask=[0,1,0,0],xy=(50,150))
             z_destination=65
             
-        self.syringes.aspirate([1,0,0,0],10.,'N','max')
+        self.syringes.aspirate([1,0,0,0],20.,'N','max')
         #self.probes.load_tips([0,0,1,0],box=2,row=12,col=1  ,tip_size=200)
 
         
@@ -1230,19 +1230,19 @@ class Gilson_System():
         #self.probes.move_z(mask=[0,0,1,0],z=130,speed=9000)
         self.probes.move_z(mask=[0,0,1,0],z=z_destination,speed='max')
         self.syringes.aspirate([1,0,0,0],float(volume),'N',8.0)
-        self.probes.move_z(mask=[0,0,1,0],z=130,speed=18000)
+        self.probes.move_z(mask=[0,0,1,0],z=130,speed=28000)
         self.syringes.aspirate([1,0,0,0],12.0,'N',5.0)
         self.probes.move_z(mask=[0,0,1,0],z=160,speed='max')
 
         #move 2nd well
         self.probes.move_xy(mask=[0,0,1,0],xy=(x,y))
-        self.probes.move_z(mask=[0,0,1,0],z=150,speed=18000)
-        self.probes.move_z(mask=[0,0,1,0],z=z,speed=18000)
-        self.syringes.dispense([1,0,0,0],10.0,50.0)
+        self.probes.move_z(mask=[0,0,1,0],z=150,speed=28000)
+        self.probes.move_z(mask=[0,0,1,0],z=z,speed=28000)
+        #self.syringes.dispense([1,0,0,0],10.0,50.0)
         self.syringes.dispense([1,0,0,0],float(volume),8.0)
-        self.syringes.dispense([1,0,0,0],10.0,10.0)
+        self.syringes.dispense([1,0,0,0],30.0,'max')
         self.syringes.dispense([1,0,0,0],2.0,'max')
-        self.probes.move_z(mask=[0,0,1,0],z=165,speed=9000)
+        self.probes.move_z(mask=[0,0,1,0],z=165,speed=19000)
         
         
     #delete2
@@ -1263,33 +1263,33 @@ class Gilson_System():
             
         #1rst well
         #self.probes.move_xy(mask=[0,1,0,0],xy=(281,186))
-        self.syringes.aspirate([0,0,1,0],10.,'N','max')
+        self.syringes.aspirate([0,0,1,0],20.,'N','max')
         
         self.probes.move_z(mask=[0,1,0,0],z=160,speed='max')
-        self.probes.move_z(mask=[0,1,0,0],z=z_destination,speed=18000)
+        self.probes.move_z(mask=[0,1,0,0],z=z_destination,speed=30000)
         self.syringes.aspirate([0,0,1,0],float(volume),'N',8.0)
-        self.probes.move_z(mask=[0,1,0,0],z=155,speed=18000)
+        self.probes.move_z(mask=[0,1,0,0],z=155,speed=30000)
         self.syringes.aspirate([0,0,1,0],12.0,'N',10.0)
-        self.probes.move_z(mask=[0,1,0,0],z=164,speed=18000)
+        self.probes.move_z(mask=[0,1,0,0],z=164,speed=30000)
         
 
         #move 2nd well
         self.probes.move_xy(mask=[0,1,0,0],xy=(x,y))
-        self.probes.move_z(mask=[0,1,0,0],z=z,speed=18000)
+        self.probes.move_z(mask=[0,1,0,0],z=z,speed=30000)
         self.syringes.dispense([0,0,1,0],10.0,'max')
         if(z_well_remaining==0):
             self.syringes.dispense([0,0,1,0],float(volume),5.0)
         else:
             self.syringes.dispense([0,0,1,0],float(volume/2.0),8.0)
-            self.probes.move_z(mask=[0,1,0,0],z=z_well_remaining,speed=18000)
+            self.probes.move_z(mask=[0,1,0,0],z=z_well_remaining,speed=30000)
             self.syringes.dispense([0,0,1,0],float(volume/2.0),8.0)
             
             
         self.syringes.dispense([0,0,1,0],2.0,'max')
-        self.syringes.dispense([0,0,1,0],20.0,'max')
-        self.probes.move_z(mask=[0,1,0,0],z=164,speed=9000)
+        self.syringes.dispense([0,0,1,0],30.0,'max')
+        self.probes.move_z(mask=[0,1,0,0],z=165,speed=19000)
         
-    def move_volume_from_well(self,volume,x_start,y_start,z_start,x_dest,y_dest,z_dest,probe):
+    def move_volume_from_well(self,volume,x_start,y_start,z_start,x_dest,y_dest,z_dest,probe,z_well_remaining_dest=0):
         probe_mask=0
         syringe_mask=0
         if(probe==200):
@@ -1301,29 +1301,35 @@ class Gilson_System():
             volume=volume*1.07
             probe_mask=[0,1,0,0]
             syringe_mask=[0,0,1,0]
-            
+        
         print'Final Volume moved: '+str(volume)
-        self.syringes.aspirate(syringe_mask,10.,'N','max')
+        print'probe is: '+str(probe)
+        self.syringes.aspirate(syringe_mask,20.0,'N','max')
         #self.probes.load_tips([0,0,1,0],box=2,row=12,col=1  ,tip_size=200)
         self.probes.move_xy(mask=probe_mask,xy=(x_start,y_start))
         
         
-        self.probes.move_z(mask=probe_mask,z=145,speed='max')
-        self.probes.move_z(mask=probe_mask,z=z_start,speed=18000)
+
+        self.probes.move_z(mask=probe_mask,z=z_start,speed=30000)
         self.syringes.aspirate(syringe_mask,float(volume),'N',8.0)
-        self.probes.move_z(mask=probe_mask,z=155,speed=18000)
-        self.syringes.aspirate(syringe_mask,12.0,'N',5.0)
+        self.probes.move_z(mask=probe_mask,z=155,speed=30000)
+        self.syringes.aspirate(syringe_mask,12.0,'N',8.0)
         self.probes.move_z(mask=probe_mask,z=162,speed='max')
 
         #move 2nd well
         self.probes.move_xy(mask=probe_mask,xy=(x_dest,y_dest))
-        self.probes.move_z(mask=probe_mask,z=150,speed=18000)
-        self.probes.move_z(mask=probe_mask,z=z_dest,speed=18000)
-        self.syringes.dispense(syringe_mask,10.0,50.0)
-        self.syringes.dispense(syringe_mask,float(volume),8.0)
+        self.probes.move_z(mask=probe_mask,z=150,speed=30000)
+        self.probes.move_z(mask=probe_mask,z=z_dest,speed=30000)
+        
+        if(z_well_remaining_dest==0):
+            self.syringes.dispense(syringe_mask,float(volume),8.0)
+        else:
+            self.syringes.dispense([0,0,1,0],float(volume/2.0),8.0)
+            self.probes.move_z(mask=[0,1,0,0],z=z_well_remaining_dest,speed=30000)
+            self.syringes.dispense([0,0,1,0],float(volume/2.0),8.0)
         self.syringes.dispense(syringe_mask,10.0,10.0)
-        self.syringes.dispense(syringe_mask,2.0,'max')
-        self.probes.move_z(mask=probe_mask,z=162,speed=9000)
+        self.syringes.dispense(syringe_mask,22.0,'max')
+        self.probes.move_z(mask=probe_mask,z=164,speed=19000)
         
     
         
