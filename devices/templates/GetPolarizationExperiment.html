@@ -1,0 +1,119 @@
+
+{% load static %}
+{% get_static_prefix as STATIC_PREFIX %}
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="robots" content="noarchive" />
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+
+
+
+
+<style>
+            h2{color:#87CEEB;font-family:'Georgia';}
+</style>
+
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+
+
+
+<script class="code" type="text/javascript">
+
+</script>
+
+
+
+
+
+
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/jquery.jqplot.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.logAxisRenderer.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.dateAxisRenderer.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.categoryAxisRenderer.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.barRenderer.min.js"></script>
+<link rel="stylesheet" type="text/css" hrf="{{ STATIC_PREFIX }}js/jqPlot/jquery.jqplot.min.css" />
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.highlighter.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.categoryAxisRenderer.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.cursor.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.highlighter.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.dragable.min.js"></script>
+<script type="text/javascript" src="{{ STATIC_PREFIX }}js/jqPlot/plugins/jqplot.trendline.min.js"></script>
+
+<script src="{{ STATIC_PREFIX }}js/devices.js" type="text/javascript"charset="utf-8"></script>
+
+
+
+
+  </head>
+<body>
+
+
+<br />
+<div align="center"  class='main'  id='main'>
+
+        <div  align="center"   style="border: 2px solid #ADCDEC;border-radius: 13px; width:508px">  	   
+     Polarization Scan
+ 
+    
+    
+
+	<div style='clear:left;width:528px;'>
+		<table align="center">
+			<tr>
+				    
+				    <td style="width:100px;">
+						<div style="height:22px;" >Start Angle</div>	
+						<div style="height:22px;">End Angle</div>
+						<div style="height:22px	;"> Step</div>
+
+				    </td>
+				    <td style="width:100px;">
+						<div>Input Polarization Stage
+						<input id='input_pol_start' type="text"  value=""/>
+						<input id='input_pol_end' type="text"  value=""/>
+						<input id='input_pol_step' type="text"  value=""/>
+						</div>
+
+
+				    </td>
+				    <td style="width:100px;">
+						<div>Output Polarization Stage
+						<input id='output_pol_start' type="text"  value=""/>
+						<input id='output_pol_end' type="text"  value=""/>
+						<input id='output_pol_step' type="text"  value=""/>
+						</div>
+
+				    </td>
+			</tr>
+			<tr >
+				    <td align="center" colspan=3>
+
+						<input type="submit"  class='pol_scan_submit' id='pol_scan_submit' value="Scan	"/>
+						<input type="submit"  class='pol_scan_stop' id='pol_scan_stop' value="Stop Scan	"/>
+				    </td>
+			</tr>
+		</table>
+		<!--<img src="http://chart.apis.google.com/chart?chs=100x20&amp;chf=bg,s,ffffff&amp;cht=ls&amp;chd=t:5.78,5.32,6.25,5.78&amp;chco=0066ff" alt="Google Chart"/>-->
+		
+	</div>
+	    <!--<div id="chart_div" style="width: 900px; height: 500px;"></div>-->
+	    
+	<br />
+	
+</div>
+</div>
+</div>
+<br />
+<div id="plots" ></div>
+</body>
+</html>
+
+

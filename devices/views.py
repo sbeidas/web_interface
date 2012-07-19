@@ -4,15 +4,20 @@ from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import csrf_exempt 
 from devices import models_Camera
 from devices import models_XPS
+from devices import models_Polarization_Experiment
 from devices.forms import AngleScan
-from models_LiquidHandler import Serial_Delution
 
- 
+
+
 import Image, cStringIO
 import numpy
+import json
 from django.template import Context, loader
-c=models_Camera.Camera()
+#c=models_Camera.Camera()
 xps=models_XPS.Sample()
+seriaDilutionInstance=0
+pe=models_Polarization_Experiment.PolazrizationExperiment()
+
 
 
 def index(request):
@@ -63,14 +68,66 @@ def getSampleRotationWidget(request):
         }
     c = Context({'xps_data':xps_data})
     return HttpResponse(t.render(c))
+
+def getInputPolarizationWidget(request):
+    t = loader.get_template('PolarizationWidget.html')
+    xps_data = {
+            'stage_name':'Input Polarization Stage',
+            'max_velocity': xps.getMaxVelocity(),
+            'curr_position': xps.getPosition()
+        }
+    c = Context({'xps_data':xps_data})
+    return HttpResponse(t.render(c))
+    
+def getOutputPolarizationWidget(request):
+    t = loader.get_template('PolarizationWidget.html')
+    xps_data = {
+            'stage_name':'Output Polarization Stage',
+            'max_velocity': xps.getMaxVelocity(),
+            'curr_position': xps.getPosition()
+        }
+    c = Context({'xps_data':xps_data})
+    return HttpResponse(t.render(c))
+
+def getPolarizationExperiment(request):
+    t = loader.get_template('GetPolarizationExperiment.html')
+    xps_data = {
+            'stage_name':'Output Polarization Stage',
+            'max_velocity': xps.getMaxVelocity(),
+            'curr_position': xps.getPosition()
+        }
+    c = Context({'xps_data':xps_data})
+    return HttpResponse(t.render(c))
+    
+@csrf_exempt    
+def polScan(request):
+
+    input_pol_start = int(request.REQUEST['input_pol_start'])
+    input_pol_end = int(request.REQUEST['input_pol_end'])
+    input_pol_step = int(request.REQUEST['input_pol_step'])
+    output_pol_start = int(request.REQUEST['output_pol_start'])
+    output_pol_end = int(request.REQUEST['output_pol_end'])
+    output_pol_step = int(request.REQUEST['output_pol_step'])
     
 
+    arr= pe.scan(input_pol_start,input_pol_end,input_pol_step,output_pol_start,output_pol_end,output_pol_step)
+
+    #return HttpResponse({(arr):'arr'})
+    return HttpResponse (json.dumps(arr), mimetype="application/json")
+@csrf_exempt     
+def stopPolScan(request):
+    pe.stopScan()
+    return HttpResponse()
+
     
+    
+    
+
 def getSampleRotationStageLocation(request):
          return HttpResponse({(xps.getPosition()):'position'})
 @csrf_exempt  
 def anglescan(request):
-    print 'Great Success HUGH  '
+
     sample_rotation_start=0
     sample_rotation_end=12
     sample_rotation_velocity=34
@@ -97,14 +154,25 @@ def getSerialDilutionWidget (request):
     c = Context()
     return HttpResponse(t.render(c))
     
-@csrf_exempt   
+@csrf_exempt
 def serialDilution(request):
 
-    s=Serial_Delution(float(request.REQUEST['max_conc']),float(request.REQUEST['min_conc']),float(request.REQUEST['sample_count']))
-    s.getConcentrationSamples()
-    s.getConcentrationArray()
-    s.getSampleVolumeArray()
-    s.final()
+    from models_LiquidHandler import *
+    max_conc=float(request.REQUEST['max_conc'])
+    min_conc=float(request.REQUEST['min_conc'])
+    sample_count=float(request.REQUEST['sample_count'])
+    
+    print "Max Conc "+ str(max_conc)
+    print "Min Conc "+ str(min_conc)
+    global seriaDilutionInstance
+    seriaDilutionInstance=Serial_Delution(max_conc,min_conc,sample_count)
+    return HttpResponse()
+    
+@csrf_exempt     
+def serialDilutionPrepareSample(request):
+
+    print str(type(serialDilution))
+    seriaDilutionInstance.prepareSample()
     return HttpResponse()
     
     

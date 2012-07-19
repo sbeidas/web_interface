@@ -1,6 +1,6 @@
 from models_XPS import *
 from models_PM100D import *
-import os
+
 
 
 class PolazrizationExperiment():
@@ -15,6 +15,8 @@ class PolazrizationExperiment():
         self.stop=False
         self.input_pol_stage.moveTo(input_pol_start)
         self.output_pol_stage.moveTo(output_pol_start)
+        
+        arr=[]
         
         
         intput_angle=input_pol_start  #use current position instead
@@ -32,6 +34,7 @@ class PolazrizationExperiment():
             #print "Current Input angle: "+str(intput_angle)
             
             output_angle=output_pol_start
+            
             self.output_pol_stage.moveTo(output_angle)
             
             while(output_angle<=output_pol_end):
@@ -39,12 +42,17 @@ class PolazrizationExperiment():
                     break
 
                 #capture data
-                print str(self.pm.power())
+                powerReading= (self.pm.power())
+                arr.append(powerReading)
+                print powerReading
+                
+
 
                 out_angle=int(self.output_pol_stage.getPosition()+output_pol_step)%360
                 self.output_pol_stage.moveTo(out_angle)
                 output_angle=self.output_pol_stage.getPosition()
-
+        
+        return arr
     def stopScan(self):
         self.stop=True
 
