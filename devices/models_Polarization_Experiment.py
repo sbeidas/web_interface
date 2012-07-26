@@ -9,50 +9,112 @@ class PolazrizationExperiment():
     def __init__(self):   
         self.input_pol_stage=Polarization(group='GROUP1',positioner='POSITIONER')   #to be modified
         self.output_pol_stage=Polarization(group='GROUP2',positioner='POSITIONER')  #to be modified
+        self.power_array=[]
+        self.output_angles=[]
         self.pm=PM100D()
-        
+        self.stop=False
     def scan(self,input_pol_start,input_pol_end,input_pol_step,output_pol_start,output_pol_end,output_pol_step):
         self.stop=False
+        
+        self.power_array=[]
+        self.output_angles=[]
+        print "---------------------------------------------------------"
+        print "input_pol_start:  "+ str(input_pol_start)
+        print "input_pol_end:  "+ str(input_pol_end)
+        print "input_pol_step:  "+ str(input_pol_step)
+        print "output_pol_start:  "+ str(output_pol_start)
+        print "output_pol_end:  "+ str(output_pol_end)
+        print "output_pol_step:  "+ str(output_pol_step)
+
+        print "---------------------------------------------------------"
+        
         self.input_pol_stage.moveTo(input_pol_start)
         self.output_pol_stage.moveTo(output_pol_start)
         
-        arr=[]
+
         
+        input_angle=input_pol_start  #use current position instead
+        in_iteration=0
+        out_iteration=0
         
-        intput_angle=input_pol_start  #use current position instead
-        output_angle=output_pol_start #use current position instead
-        
-        while (intput_angle<input_pol_end):
+       
+        while (round(input_angle+(in_iteration*360))<=input_pol_end):
+            
+            print "(((((((((((((((((((((((((((((((((((((((((((((((((((((((((("
+            print "input angle:  "+ str(round(input_angle+(in_iteration*360)))
+            print "(("+str(in_iteration)
+            print "input_pol_end:  "+ str(input_pol_end)
+            print "(((((((((((((((((((((((((((((((((((((((((((((((((((((((((("
+            
             if(self.stop):
-                break
+                return self.power_array,self.output_angles
+            
 
 
-            intput_angle=self.input_pol_stage.getPosition()
-            in_angle=(self.input_pol_stage.getPosition()+input_pol_step)%360
-            self.input_pol_stage.moveTo(in_angle)
             input_angle=self.input_pol_stage.getPosition()
-            #print "Current Input angle: "+str(intput_angle)
+            in_angle=round(self.input_pol_stage.getPosition()+input_pol_step)
+            input_angle=in_angle
             
-            output_angle=output_pol_start
+            if(in_angle>=360):
+                in_angle=in_angle%360
+                in_iteration+=1
+                 
+            self.input_pol_stage.moveTo(in_angle)
             
-            self.output_pol_stage.moveTo(output_angle)
             
-            while(output_angle<=output_pol_end):
-                if(self.stop):
-                    break
-
-                #capture data
-                powerReading= (self.pm.power())
-                arr.append(powerReading)
-                print powerReading
-                
-
-
-                out_angle=int(self.output_pol_stage.getPosition()+output_pol_step)%360
-                self.output_pol_stage.moveTo(out_angle)
-                output_angle=self.output_pol_stage.getPosition()
+            #print "Current Input angle: "+str(input_angle)
+            
+            self.power_array,self.output_angles,out_iteration=self.scan_out_pol(output_pol_start,output_pol_end,output_pol_step,self.power_array,in_iteration,out_iteration)
+            
+        return  self.power_array,self.output_angles
+    
+    def scan_out_pol(self,output_pol_start,output_pol_end,output_pol_step,power_array=[],in_iteration=0,out_iteration=0):
         
-        return arr
+        
+        
+        
+        self.output_pol_stage.moveTo(output_pol_start)
+        output_curr_angle=output_pol_start
+        
+        
+        if(output_pol_start==output_pol_end and output_pol_step==0):
+            powerReading= (self.pm.power())
+            #self.power_array.append(([self.input_pol_stage.getPosition()+(in_iteration*360),powerReading]))
+            self.power_array.append(powerReading)
+            self.output_angles.append(self.input_pol_stage.getPosition())
+            return self.power_array,self.output_angles
+        
+        while((output_curr_angle+(out_iteration*360))<=output_pol_end):
+            if(self.stop):
+                return self.power_array,self.output_angles
+            
+            print "========================================================="
+            print "output angle:  "+ str((output_curr_angle+(out_iteration*360)))
+            print "=="+str(out_iteration)
+            print "output_pol_end:  "+ str(output_pol_end)
+            print "========================================================="
+            
+            #capture data
+            powerReading= (self.pm.power())
+            #self.power_array.append([self.output_pol_stage.getPosition()+(out_iteration*360),powerReading]) 
+            self.power_array.append(powerReading)
+            self.output_angles.append(self.output_pol_stage.getPosition())
+            
+            print powerReading
+            
+            out_angle=round((self.output_pol_stage.getPosition()+output_pol_step))
+            
+            if(output_curr_angle>output_pol_end):
+                break
+            if(out_angle>=360):
+                
+                out_angle=out_angle%360
+                out_iteration+=1
+                
+            
+            self.output_pol_stage.moveTo(out_angle)
+            output_curr_angle=out_angle
+        return (self.power_array,self.output_angles,out_iteration)
     def stopScan(self):
         self.stop=True
 
