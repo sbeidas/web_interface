@@ -1,0 +1,133 @@
+
+{% load static %}
+{% get_static_prefix as STATIC_PREFIX %}
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="robots" content="noarchive" />
+
+
+
+
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.0/jquery.min.js"></script>
+
+
+<script src="{{ STATIC_PREFIX }}js/devices.js" type="text/javascript"
+    charset="utf-8"></script>
+<script src="{{ STATIC_PREFIX }}js/jquery.knob.js" type="text/javascript"
+    charset="utf-8"></script>
+<script>
+            $(function() {
+                $(".knob").knob();
+                // Example of infinite knob, iPod click wheel
+                var val,up=0,down=0,i=0
+                    ,$idir = $("div.idir")
+                    ,$ival = $("div.ival")
+                    ,incr = function() { i++; $idir.show().html("+").fadeOut(); $ival.html(i); }
+                    ,decr = function() { i--; $idir.show().html("-").fadeOut(); $ival.html(i); };
+                $("input.infinite").knob(
+                                    {
+                                    'min':0
+                                    ,'max':20
+                                    ,'stopper':false
+                                    ,'change':function(v){
+                                                if(val>v){
+                                                    if(up){
+                                                        decr();
+                                                        up=0;
+                                                    }else{up=1;down=0;}
+                                                }else{
+                                                    if(down){
+                                                        incr();
+                                                        down=0;
+                                                    }else{down=1;up=0;}
+                          
+			                        }
+                                                val=v;
+                                            }
+                                    }
+                                    );
+
+            });
+        </script>
+<style>
+            h2{color:#87CEEB;font-family:'Georgia';}
+</style>
+</head>
+<body>
+
+
+<div  class='main' style="border: 2px solid #ADCDEC;border-radius: 13px; width:508px">
+
+        <div align="center" style="padding-bottom:10px;">     
+     {{ xps_data.stage_name }}
+ 
+    </div>
+    
+	
+	<br /?>
+	<table style="border: 1px solid #ADCDEC;border-radius: 13px;">
+	<tr>
+		<td>
+			<div style="padding-bottom:90px;float:left">
+				<div  style="width:100px;float:left;padding-left:40px;">
+					<div align="left">
+						 Start 
+					</div>
+					<input id='sample_rotation_start'data-min="0" data-max="360" class="knob" data-cursor="true" data-skin="tron" data-ticks="8" value="0" ">
+				</div>
+				<div  style="width:100px;float:left;padding-left:40px;">
+					<div align="left">
+						 End 
+					</div>
+					<input  id='sample_rotation_end' data-min="0" data-max="360" class="knob" data-cursor="true" data-skin="tron" data-ticks="8" value="0" ">
+				</div>
+				<div style="width:100px;float:left;padding-left:40px;">
+					<div align="left">
+						 Velocity
+					</div>
+					<input id='sample_rotation_velocity'  data-min="0" data-max="{{ xps_data.max_velocity }}" class="knob" data-cursor="true" data-skin="tron" data-ticks="8" value="0" ">
+				</div>
+				<div class='sample_rotation_scan' id='sample_rotation_scan' style="width:50px;float:left;padding-right:30px;">
+				
+						<a  value="Scan" href='javascript:void(0)'>Scan </a>
+				
+				</div>
+			</div>
+			
+			
+			
+				<div  style="width:100px;float:left;padding-left:40px;">
+					<div align="left">
+						 Start 
+					</div>
+					<input id='sample_rotation_start'data-min="0" data-max="360" class="knob" data-cursor="true" data-skin="tron" data-ticks="8" value="0" ">
+				</div>
+				<div  style="width:100px;float:left;padding-left:40px;">
+					<div align="left">
+						 End 
+					</div>
+					<input  id='sample_rotation_end' data-min="0" data-max="360" class="knob" data-cursor="true" data-skin="tron" data-ticks="8" value="0" ">
+				</div>
+				<div style="width:100px;float:left;padding-left:40px;">
+					<div align="left">
+						 Velocity
+					</div>
+					<input id='sample_rotation_velocity'  data-min="0" data-max="{{ xps_data.max_velocity }}" class="knob" data-cursor="true" data-skin="tron" data-ticks="8" value="0" ">
+				</div>
+				<div class='sample_rotation_scan' id='sample_rotation_scan' style="width:50px;float:left;padding-right:30px;">
+				
+						<a  value="Scan" href='javascript:void(0)'>Scan </a>
+				
+				</div>
+			</div>
+
+			
+		</td>
+	</tr>
+	</table>
+</div>
+</div>
+</body>
+</html>

@@ -1,6 +1,127 @@
 
+function saveImage(id){
+    
+    var oCanvas=$('#'+id).children('canvas')
+    //var oCanvas2=$('#'+id).children('div').children('canvas')
+    
+
+    
+
+      w= oCanvas[0].width;
+      h= oCanvas[0].height;
 
 
+
+      var newCanvas = $('<canvas id="tempcanvas" />').attr('width',w).attr('height',h)[0];
+      var newContext =newCanvas.getContext("2d");   
+      $(oCanvas).each(function() {
+        newContext.drawImage(this, 0, 0);
+      });
+      //$(oCanvas2).each(function() {
+       // newContext.drawImage(this, 0, 0);
+      //});
+      
+      dataURL= newCanvas.toDataURL("image/png"); // Base64 encoded data url string
+       return(dataURL)
+
+    
+}
+var pol_experiment={
+    scan: function() {
+        $.ajax({
+        url: ' /polScan ',
+        cache: 'false',
+        data: {
+            'input_pol_start': $('#input_pol_start').val(),
+            'input_pol_end': $('#input_pol_end').val(),
+            'input_pol_step': $('#input_pol_step').val(),
+            
+            'output_pol_start': $('#output_pol_start').val(),
+            'output_pol_end': $('#output_pol_end').val(),
+            'output_pol_step': $('#output_pol_step').val()
+        },
+        type: 'post',
+        async: 'false',
+            success: function(data) {
+            date=new Date().getTime()
+            divName='chart'+ date
+            $('#plots').append('<div style="width: 1750px" id='+divName+'>')
+            var plot1 = $.jqplot('chart'+ date, [data], {
+                legend: {show:false},
+                axes:{
+                  xaxis:{
+                  tickOptions:{
+                    
+                    angle: -30
+                  },
+                  tickRenderer:$.jqplot.CanvasAxisTickRenderer,
+                    label:'Angle', 
+                  labelOptions:{
+                    fontFamily:'Helvetica',
+                    fontSize: '12pt'
+                  },
+                  labelRenderer: $.jqplot.CanvasAxisLabelRenderer
+                  }, 
+                  yaxis:{
+                    
+                    renderer:$.jqplot.LogAxisRenderer,
+                    tickOptions:{
+ 
+                        labelPosition: 'middle', 
+                        angle:-30
+                    },
+                    tickRenderer:$.jqplot.CanvasAxisTickRenderer,
+                    labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                    labelOptions:{
+                        fontFamily:'Helvetica',
+                        fontSize: '12pt'
+                    },
+                    label:''
+                  }
+                },
+                highlighter: {
+                    show: true ,    
+                    sizeAdjust: 10,
+      
+                },
+                cursor:{
+                show: true, 
+                zoom: true
+                } ,
+            });
+             href="'"+saveImage(divName)+"'"
+             $('#'+divName).append("</div><a  target='_blank'  href="+href+" style='position: relative;margin-right:-150px; margin-top:100px;float:right;' >"+"<input type='button' value='Save plot as Image' "+"</a>")
+             
+             
+            },
+            
+            error: function() {
+                    console.log();
+            },
+        });
+    },
+    
+    stopScan: function() {
+        $.ajax({
+        url: ' /stopPolScan ',
+        cache: 'false',
+        data: {
+
+        },
+        type: 'post',
+        async: 'false',
+            success: function(data) {
+            
+            },
+            error: function() {
+                    console.log();
+            },
+        });
+    },
+
+    
+   
+}
 var sample_rotation={
     anglescan: function() {
         $.ajax({
@@ -65,6 +186,24 @@ var liquid_handler={
             },
         });
     },
+        prepareSample: function() {
+        $.ajax({
+        url: ' /serialDilutionPrepareSample ',
+        cache: 'false',
+        data: {
+
+        },
+        type: 'post',
+        async: 'false',
+            success: function(data) {
+
+             alert('Great Success')
+            },
+            error: function() {
+                    console.log();
+            },
+        });
+    },
        
 }
 
@@ -92,8 +231,20 @@ $(document).ready(function() {
             sample_rotation.move_sample_stage( );
     });
     $('.serial_delution_submit').click( function() {
-  
+
         liquid_handler.serialDilute( );
+    });
+        $('.serial_delution_prepare_sample').click( function() {
+
+        liquid_handler.prepareSample( );
+    });
+        $('.pol_scan_submit').click( function() {
+        
+        pol_experiment.scan();
+    });
+        $('.pol_scan_stop').click( function() {
+
+        pol_experiment.stopScan( );
     });
 });
 
@@ -118,9 +269,21 @@ $(document).ready(function() {
 });
 **/
 // Ajax activity indicator bound to ajax start/stop document events
-$(document).ajaxStart(function(){
-  $('#curr_position').val('Moving stage...')
+
+$(document).ajaxStop(function(){
+    $('#ajaxBusy').hide();;
+    
+  
 });
+
+$(document).ajaxStart(function(){
+
+    $('#ajaxBusy').show();
+  
+});
+
+
+
 
 
 
