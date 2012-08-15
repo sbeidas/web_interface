@@ -6,7 +6,8 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import math
-import scipy.stats as st
+import scipy.stats.mstats as st
+import scipy.signal as sig
 
 
 class PolazrizationExperiment():
@@ -60,7 +61,7 @@ class PolazrizationExperiment():
                 
             self.input_pol_stage.moveTo(in_angle)
             self.power_array=self.spin_and_capture(output_pol_start
-                                                   ,output_pol_end,velocity=200
+                                                   ,output_pol_end,velocity=80
                                                     ,num_samples=num_samples)
                  
         return  self.power_array
@@ -70,14 +71,12 @@ class PolazrizationExperiment():
                          ,num_samples=float('inf')):
         
         self.output_pol_stage.moveTo(float(start_angel))
-        self.output_pol_stage.spin(float(velocity),float(acc))
+        self.output_pol_stage.spin(float(velocity),float(acc),wait=False)
 
         i=0
 
         while(self.output_pol_stage.getPosition()<end_angel):
 
-
-            
             if(i>num_samples-1): #change
                 print 'spin_and_capture: Too many data points collected, exiting Scan'
             else:
@@ -88,8 +87,9 @@ class PolazrizationExperiment():
             while(num_samples>len(self.power_array)):
                 self.power_array.append([None,None])
                 print 'spin_and_capture: Appending None to fit data array shape'
+                
         while(self.output_pol_stage.getPosition()>end_angel):
-            print "-----------------------------------------------"       
+            pass     
         
         return self.power_array
     
@@ -180,7 +180,7 @@ def get_exp_data(plot=False):#change: add filepath
     os.chdir('C:\Users\LAB\Documents\Subhi-tests\plasmonico_interface\devices\hdf5')
     
     f1 = h5py.File('pol_scan.hdf5', 'r')
-    pol_arr=f1['359']['scan2']['pol_arr']
+    pol_arr=f1['359']['slow']['pol_arr']
     arr=pol_arr[()]
     f1.close()
 
@@ -197,10 +197,10 @@ def get_exp_data(plot=False):#change: add filepath
         x=x[~np.isnan(x)]#remove nan values from array
         y=y[~np.isnan(y)]#remove nan values from array
         
-        print i
+
         #TODO: fix bug previous p = current p if y and aare 
         if(x.size and  y.size):
-            p0 = np.array([np.max(y)-np.min(y), 53., np.min(y)])    
+            p0 = np.array([np.max(y)-np.min(y), 60., np.min(y)])    
             p ,cov =fitpol(x,y,p0)
 
             
@@ -284,46 +284,75 @@ class AnalyizePol():
         self.exp_amps=exp_amps
         self.exp_phis=exp_phis
         self.exp_bgs=exp_bgs
-
-    def adjustPhase(self,plot=False):
-        #CHANGE: add method to determone roll angel
-        self.exp_amps=np.roll(self.exp_amps,24)
-        self.exp_phis=np.roll(self.exp_phis,24)
-        self.exp_bgs=np.roll(self.exp_bgs,24)
         
-        if plot:
-            fig = plt.figure()
-            ax1 = fig.add_subplot(311)
-            ax2 = fig.add_subplot(312)
-            ax3 = fig.add_subplot(313)
-            
-            ax1.plot(self.angels,self.exp_amps)
-            ax2.plot(self.angels,self.exp_phis)
-            ax3.plot(self.angels,self.exp_bgs)
-            
-            ax1.set_xlim(0,360)
-            ax2.set_xlim(0,360)
-            ax3.set_xlim(0,360)
-            
-            plt.show()
-            
-    def corrolateAmps(self):
-        #self.adjustPhase()
-        cor=[]
-        #TODO: fix sim data to avoid using "-2" to ignore 2 thast 2 extra data rows 
-        for i in range(len(self.sim_amps)-2):
-            cor.append(st.chisquare(f_exp=self.sim_amps[i],f_obs=a.exp_amps))
 
-        cor=np.array(cor)
+    def adjustPhase(self,observed,expected,plot=False):
         
+        #TO fix 
+        p_o=fitpol(np.linspace(0,358,359),observed)
+        p_e=fitpol(np.linspace(0,358,359),expected)
+        
+        delta=int(round((p_e[0][1])-(p_o[0][1])))%180
+        print 'd:'+str(delta)
+        
+        
+    
+        #TODO: add method to determone roll angel
+        self.exp_amps=np.roll(self.exp_amps,delta)
+        self.exp_phis=np.roll(self.exp_phis,delta)
+        self.exp_bgs=np.roll(self.exp_bgs,delta)
+        
+        if(plot==True):
+
+            angels=np.linspace(0,358,359)
+            plot_parameters(self.exp_amps,self.exp_phis,self.exp_bgs,angels)
+        
+        '''
+        angels=np.linspace(0,358,359)
         fig = plt.figure()
         ax1 = fig.add_subplot(311)
-        print self.angels.shape
-        print cor[:,0].shape
-        ax1.plot(self.angels,cor[:,0])
-        plt.show()
-        
-        return cor[:,0]
+        ax1.plot(angels,self.exp_phis,'ro',angels,expected,'b-')
+        plt.show
+        '''
+            
+    def corrolateAmps(self):
+
+        cor=[]
+        test=[]
+        self.adjustPhase(self.exp_phis,self.sim_phis[0,0:359])
+        #TODO: fix sim data to avoid using "-2" to ignore 2 thast 2 extra data rows 
+        for i in range(len(self.sim_amps)-2):
+
+            #adjust for amp difference between simulation and exprimental
+            bg_observed=self.exp_bgs
+            bg_expected=self.sim_bgs[i,0:359]
+            max_sim_bg=bg_expected.max()
+            max_exp_bg=bg_observed.max()
+            bg_observed=(max_sim_bg/max_exp_bg)*bg_observed
+
+            amp_observed=self.exp_amps
+            amp_expected=self.sim_amps[i,0:359]
+            max_sim_amp=amp_expected.max()
+            max_exp_amp=amp_observed.max()
+            amp_observed=(max_sim_amp/max_exp_amp)*amp_observed
+
+            '''
+            if(i==45):
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                ax.plot(np.linspace(0,358,359),amp_observed,'b-',np.linspace(0,358,359),amp_expected,'r-')
+                plt.show()
+            '''
+            amp_chi=st.chisquare(amp_expected,amp_observed)
+
+            bg_chi=st.chisquare(bg_expected,bg_observed)
+            
+
+            cor.append(amp_chi+bg_chi)
+
+        cor=np.array(cor)
+
+        return cor[:,0].argmin()
         
         
         
