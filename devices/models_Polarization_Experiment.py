@@ -20,10 +20,13 @@ class PolazrizationExperiment():
         
         
     def scan(self,input_pol_start,input_pol_end,input_pol_step,output_pol_start,output_pol_end,output_pol_step,num_samples=float('inf')):
-        self.stop=False
         
+        self.stop=False
         self.power_array=[]
-        self.output_angles=[]
+        
+        #move to initial positions
+        self.input_pol_stage.moveTo(input_pol_start)
+        self.output_pol_stage.moveTo(output_pol_start)
         
         print "---------------------------------------------------------"
         print "input_pol_start:  "+ str(input_pol_start)
@@ -34,36 +37,31 @@ class PolazrizationExperiment():
         print "output_pol_step:  "+ str(output_pol_step)
         print "---------------------------------------------------------"
         
-        self.input_pol_stage.moveTo(input_pol_start)
-        self.output_pol_stage.moveTo(output_pol_start)
+
         
 
-        in_angle=input_pol_start  #use current position instead
+        input_current_angle=input_pol_start  #set current angle to start angel
         in_iteration=0
-        out_iteration=0
         
-        while (round(in_angle+(in_iteration*360))<=input_pol_end):
+        while (round(input_current_angle+(in_iteration*360))<=input_pol_end):
 
-            print "(((((((((((((((((((((((((((((((((((((((((((((((((((((((((("
-            print "input angle:  "+ str(round(in_angle+(in_iteration*360)))
-            print "(("+str(in_iteration)
-            print "input_pol_end:  "+ str(input_pol_end)
-            print "(((((((((((((((((((((((((((((((((((((((((((((((((((((((((("
+            print "----------------------------------------------------------"
+            print "input angle:  "+ str(round(input_current_angle+(in_iteration*360)))
+            print "----------------------------------------------------------"
             
-            if(self.stop):
-                return self.power_array,self.output_angles
 
-            in_angle=round(self.input_pol_stage.getPosition()+input_pol_step)
+            input_current_angle=round(self.input_pol_stage.getPosition()+input_pol_step)
             
-            if(in_angle>=360):
-                in_angle=in_angle%360
+            if(input_current_angle>=360):
+                input_current_angle=input_current_angle%360
                 in_iteration+=1
                 
-            self.input_pol_stage.moveTo(in_angle)
+            self.input_pol_stage.moveTo(input_current_angle)
+            
+            # spin output polazrization stage
             self.power_array=self.spin_and_capture(output_pol_start
                                                    ,output_pol_end,velocity=80
                                                     ,num_samples=num_samples)
-                 
         return  self.power_array
     
     
@@ -72,9 +70,8 @@ class PolazrizationExperiment():
         
         self.output_pol_stage.moveTo(float(start_angel))
         self.output_pol_stage.spin(float(velocity),float(acc),wait=False)
-
+        
         i=0
-
         while(self.output_pol_stage.getPosition()<end_angel):
 
             if(i>num_samples-1): #change
@@ -94,21 +91,10 @@ class PolazrizationExperiment():
         return self.power_array
     
     
-
     def stopScan(self):
         self.stop=True
-        
-    def getAngelsArray(self):
-        arr=[]
-        for i in range(len(self.power_array)):
-            arr.append(self.power_array[i][0])
-        return arr
-    def getPowersArray(self):
-        arr=[]
-        for i in range(len(self.power_array)):
-            arr.append(self.power_array[i][1])
-        return arr
-    
+
+
     def scan_pol_data_hdf5(self,numImages):
         i=0
         a=[]
@@ -169,7 +155,7 @@ def get_sim_data(filepath,array="all"):
         bgs_arr=f['bgs']['bgs_arr']
         phis_arr=f['phis']['phis_arr']
 
-        return np.array(amps_arr),np.array(phis_arr),np.array(bgs_arr)
+        return amps_arr,phis_arr,bgs_arr
     else:
         data_arr=np.copy(f[array][array+'_arr'])
         f.close()
@@ -186,42 +172,35 @@ def get_exp_data(plot=False):#change: add filepath
 
     popt=[]	
     pcov=[]
-    
+
     d3_aray=len(arr[0,0,:]) #3d dimension of array (number of input angels sampled)
     nan_arr=[]
-    
+
     for i in range(d3_aray):
         x=arr[:,0,i]
         y= arr[:,1,i]
 
         x=x[~np.isnan(x)]#remove nan values from array
         y=y[~np.isnan(y)]#remove nan values from array
-        
 
-        #TODO: fix bug previous p = current p if y and aare 
-        if(x.size and  y.size):
-            p0 = np.array([np.max(y)-np.min(y), 60., np.min(y)])    
-            p ,cov =fitpol(x,y,p0)
-
-            
+        p0 = np.array([np.max(y)-np.min(y), 60., np.min(y)])    
+        p ,cov =fitpol(x,y,p0)
+   
         popt.append(p)
         pcov.append(cov)
         nan_arr.append(float(i))
 
-    angels=np.linspace(0,359,d3_aray)
-    
-
-    
     popt=np.array(popt)
     pcov=np.array(pcov)
-    
+
     amp=popt[:,0]
     phi=popt[:,1]
     bg=popt[:,2]
-    
+
     if plot:
+        angels=np.linspace(0,359,d3_aray)
         plot_parameters(amp,phi,bg,angels)
-        
+
     return amp,phi,bg,angels
 
 
@@ -236,11 +215,11 @@ def plot_parameters(amp,phi,bg,angels):
 
     ax2.plot(angels,phi)
     ax3.plot(angels,bg)
-    
+
     ax1.set_xlim(0,360)
     ax2.set_xlim(0,360)
     ax3.set_xlim(0,360)
-    
+
     plt.show()  
     
 
@@ -256,7 +235,7 @@ def fitpol(x,y, guess=np.array([1, 90., 0.])):
         p[1]-=180.0 
     while p[1]<0.0:
         p[1]+=180.0
-        
+
     a=np.isinf(cov)
     if(a.all()):
         print 'Failed to fit a function'
@@ -269,15 +248,10 @@ class AnalyizePol():
         #Simulation Amplitude,Phase and BackGround(offset) arrays
         amps,phis,bgs=get_sim_data('C:\Users\LAB\Documents\Subhi-tests\plasmonico_interface\devices\hdf5')
 
-        #removing extra data point (hdf5 need to be modified to avoid this)
-        amps=np.delete(amps,359,1)
-        phis=np.delete(phis,359,1)
-        bgs=np.delete(bgs,359,1)
-        
         self.sim_amps=amps
         self.sim_phis=phis
         self.sim_bgs=bgs
-        
+
         #get experimental data
         exp_amps,exp_phis,exp_bgs,angels=get_exp_data()
         self.angels=angels
@@ -285,81 +259,81 @@ class AnalyizePol():
         self.exp_phis=exp_phis
         self.exp_bgs=exp_bgs
         
+        #removing extra data point (hdf5 need to be modified to avoid this)
+        amps=np.delete(amps,359,1)
+        phis=np.delete(phis,359,1)
+        bgs=np.delete(bgs,359,1)
+
 
     def adjustPhase(self,observed,expected,plot=False):
         
-        #TO fix 
+        #fit observed and experimental 
         p_o=fitpol(np.linspace(0,358,359),observed)
         p_e=fitpol(np.linspace(0,358,359),expected)
         
         delta=int(round((p_e[0][1])-(p_o[0][1])))%180
-        print 'd:'+str(delta)
-        
-        
-    
-        #TODO: add method to determone roll angel
+        print 'Phase adjusted by:'+str(delta)
+
+        #roll values in array to adjust for phase
         self.exp_amps=np.roll(self.exp_amps,delta)
         self.exp_phis=np.roll(self.exp_phis,delta)
         self.exp_bgs=np.roll(self.exp_bgs,delta)
         
         if(plot==True):
-
             angels=np.linspace(0,358,359)
             plot_parameters(self.exp_amps,self.exp_phis,self.exp_bgs,angels)
-        
-        '''
-        angels=np.linspace(0,358,359)
-        fig = plt.figure()
-        ax1 = fig.add_subplot(311)
-        ax1.plot(angels,self.exp_phis,'ro',angels,expected,'b-')
-        plt.show
-        '''
-            
-    def corrolateAmps(self):
 
+
+    def corrolateAmps(self):
         cor=[]
-        test=[]
         self.adjustPhase(self.exp_phis,self.sim_phis[0,0:359])
+        
         #TODO: fix sim data to avoid using "-2" to ignore 2 thast 2 extra data rows 
         for i in range(len(self.sim_amps)-2):
 
-            #adjust for amp difference between simulation and exprimental
+            # adjust for amp magnitude difference between simulation and exp results
             bg_observed=self.exp_bgs
             bg_expected=self.sim_bgs[i,0:359]
             max_sim_bg=bg_expected.max()
             max_exp_bg=bg_observed.max()
-            bg_observed=(max_sim_bg/max_exp_bg)*bg_observed
+            bg_observed=(max_sim_bg/max_exp_bg)*bg_observed 
 
+            # adjust for amp magnitude difference between simulation and exp results
             amp_observed=self.exp_amps
             amp_expected=self.sim_amps[i,0:359]
             max_sim_amp=amp_expected.max()
             max_exp_amp=amp_observed.max()
-            amp_observed=(max_sim_amp/max_exp_amp)*amp_observed
+            amp_observed=(max_sim_amp/max_exp_amp)*amp_observed 
 
-            '''
-            if(i==45):
-                fig = plt.figure()
-                ax = fig.add_subplot(111)
-                ax.plot(np.linspace(0,358,359),amp_observed,'b-',np.linspace(0,358,359),amp_expected,'r-')
-                plt.show()
-            '''
-            amp_chi=st.chisquare(amp_expected,amp_observed)
-
-            bg_chi=st.chisquare(bg_expected,bg_observed)
             
+            amp_chi=st.chisquare(amp_expected,amp_observed)#amp chisqaure
+            bg_chi=st.chisquare(bg_expected,bg_observed) #bg chisqaure
 
-            cor.append(amp_chi+bg_chi)
+            #TODO: fix 
+            cor.append(amp_chi+bg_chi) # append values amp and bg to array
 
-        cor=np.array(cor)
+        cor=np.array(cor)# cast to numpy array
 
-        return cor[:,0].argmin()
+        return cor[:,0].argmin() # get location of minumuim chisquare in array (angle)
         
         
         
+
+'''
+ if(i==45):
+     fig = plt.figure()
+     ax = fig.add_subplot(111)
+     ax.plot(np.linspace(0,358,359),amp_observed,'b-',np.linspace(0,358,359),amp_expected,'r-')
+     plt.show()
+ '''     
         
-        
-        
-        
+'''
+angels=np.linspace(0,358,359)
+fig = plt.figure()
+ax1 = fig.add_subplot(311)
+ax1.plot(angels,self.exp_phis,'ro',angels,expected,'b-')
+plt.show
+'''
 '''
     def scan_out_pol(self,output_pol_start,output_pol_end,output_pol_step,power_array=[],in_iteration=0,out_iteration=0):
         self.output_pol_stage.moveTo(output_pol_start)
