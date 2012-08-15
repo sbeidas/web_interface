@@ -98,7 +98,7 @@ class PolazrizationExperiment():
     def scan_pol_data_hdf5(self,numImages):
         i=0
         a=[]
-        print 'Scanning angels '
+        print 'Scanning angles '
         newpath = 'hdf5'
         if not os.path.exists(newpath):
             os.makedirs(newpath)
@@ -173,7 +173,7 @@ def get_exp_data(plot=False):#change: add filepath
     popt=[]	
     pcov=[]
 
-    d3_aray=len(arr[0,0,:]) #3d dimension of array (number of input angels sampled)
+    d3_aray=len(arr[0,0,:]) #3d dimension of array (number of input angles sampled)
     nan_arr=[]
 
     for i in range(d3_aray):
@@ -196,25 +196,26 @@ def get_exp_data(plot=False):#change: add filepath
     amp=popt[:,0]
     phi=popt[:,1]
     bg=popt[:,2]
-
+    
+    angles=np.linspace(0,359,d3_aray)
     if plot:
-        angels=np.linspace(0,359,d3_aray)
-        plot_parameters(amp,phi,bg,angels)
 
-    return amp,phi,bg,angels
+        plot_parameters(amp,phi,bg,angles)
+
+    return amp,phi,bg,angles
 
 
-def plot_parameters(amp,phi,bg,angels):
+def plot_parameters(amp,phi,bg,angles):
     
     fig = plt.figure()
     ax1 = fig.add_subplot(311)
     ax2 = fig.add_subplot(312)
     ax3 = fig.add_subplot(313)
 
-    ax1.plot(angels,amp)
+    ax1.plot(angles,amp)
 
-    ax2.plot(angels,phi)
-    ax3.plot(angels,bg)
+    ax2.plot(angles,phi)
+    ax3.plot(angles,bg)
 
     ax1.set_xlim(0,360)
     ax2.set_xlim(0,360)
@@ -253,8 +254,8 @@ class AnalyizePol():
         self.sim_bgs=bgs
 
         #get experimental data
-        exp_amps,exp_phis,exp_bgs,angels=get_exp_data()
-        self.angels=angels
+        exp_amps,exp_phis,exp_bgs,angles=get_exp_data()
+        self.angles=angles
         self.exp_amps=exp_amps
         self.exp_phis=exp_phis
         self.exp_bgs=exp_bgs
@@ -280,8 +281,8 @@ class AnalyizePol():
         self.exp_bgs=np.roll(self.exp_bgs,delta)
         
         if(plot==True):
-            angels=np.linspace(0,358,359)
-            plot_parameters(self.exp_amps,self.exp_phis,self.exp_bgs,angels)
+            angles=np.linspace(0,358,359)
+            plot_parameters(self.exp_amps,self.exp_phis,self.exp_bgs,angles)
 
 
     def corrolateAmps(self):
@@ -328,10 +329,10 @@ class AnalyizePol():
  '''     
         
 '''
-angels=np.linspace(0,358,359)
+angles=np.linspace(0,358,359)
 fig = plt.figure()
 ax1 = fig.add_subplot(311)
-ax1.plot(angels,self.exp_phis,'ro',angels,expected,'b-')
+ax1.plot(angles,self.exp_phis,'ro',angles,expected,'b-')
 plt.show
 '''
 '''
